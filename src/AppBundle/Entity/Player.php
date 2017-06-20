@@ -49,6 +49,12 @@ class Player
      */
     private $maillot;
 
+    /**
+     * @var int
+     *
+     * @ORM\Column(name="equipe", type="integer")
+     */
+    private $equipe;
 
     /**
      * Get id
@@ -154,6 +160,30 @@ class Player
     public function getmaillot()
     {
         return $this->maillot;
+    }
+
+    /**
+     * Set equipe
+     *
+     * @param integer $equipe
+     *
+     * @return Player
+     */
+    public function setEquipe($equipe)
+    {
+        $this->equipe = $equipe;
+
+        return $this;
+    }
+
+    /**
+     * Get equipe
+     *
+     * @return int
+     */
+    public function getEquipe()
+    {
+        return $this->equipe;
     }
 
 }

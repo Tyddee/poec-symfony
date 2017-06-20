@@ -29,12 +29,32 @@ class PlayerController extends Controller
         // Récupération du repository pr les opérations en lecture (pas utile pr les autres op CRUD).
         // Le repository est un instrument (objet) permettant de récupérer les données
         // Il propose de nombreuses méthodes de récupération de données (ex: findAll(), findById(), etc...)
-        $repository = $this
+/*        $repository = $this
                         ->getDoctrine()
                         ->getManager()
-                        ->getRepository('AppBundle:Player');
+                        ->getRepository('AppBundle:Player');*/
 
-        $players = $repository->findAll();
+        //$players = $repository->findAll();
+
+        $em = $this->getDoctrine()->getManager();
+
+        $query = $em->createQuery('
+            SELECT p
+            FROM AppBundle:Player p
+            WHERE p.age < :age
+        ')->setParameter('age', 100);
+
+        // requête personnalisée avec jointure
+        // A COMPLETER
+/*        $query = $em->createQuery('
+            SELECT p, t
+            FROM AppBundle:Player p
+            JOIN AppBundle:Team t
+            WHERE p.equipe = t.id
+        ');*/
+
+        $players = $query->getResult();
+        //var_dump($players);
 
         return $this->render('player/index.html.twig', array(
             'title'         => $title,
@@ -83,6 +103,7 @@ class PlayerController extends Controller
             $player->setPrenom($request->get('prenom'));
             $player->setAge($request->get('age'));
             $player->setMaillot($request->get('maillot'));
+            $player->setEquipe($request->get('equipe'));
 
             $em = $this->getDoctrine()->getManager();
             $em->persist($player);
@@ -92,11 +113,17 @@ class PlayerController extends Controller
             return $this->redirectToRoute('homepage');
 
         } else {
+            // récupérer la liste des équipes
+            $em = $this->getDoctrine()->getManager();
+            $repo = $em->getRepository('AppBundle:Team');
+            $teams = $repo->findAll();
+
             //echo 'requête en GET';
             // Si la route est demandée en GET, on renvoie un formulaire
-            return $this->render('player/forms/add.html.twig');
+            return $this->render('player/forms/add.html.twig', array(
+                'teams' => $teams
+            ));
         }
-
     }
 
     /**
@@ -107,24 +134,35 @@ class PlayerController extends Controller
         //->getDoctrine()   Récupère l'ORM
         //->getManager()    Outil pour opération en écriture
         //->getRepository() Outils pour opération en lecture
-        $repository = $this
-                        ->getDoctrine()
-                        ->getManager()
-                        ->getRepository('AppBundle:Player');
+        $em = $this
+                ->getDoctrine()
+                ->getManager();
+
+        $playerRepo = $em->getRepository('AppBundle:Player');
+        $teamRepo   = $em->getRepository('AppBundle:Team');
 
         // récupération de l'id
         //$id = $request ->query->get('id'); // renvoie NULL
         //var_dump($id);
 
         // Trouver le joueur correspondant en base de données
-        $player = $repository->find($id); // find() == findById() cherche tjs ds la colonne id de la table sql
+        $player = $playerRepo->find($id); // find() == findById() cherche tjs ds la colonne id de la table sql
         //var_dump($player);
 
+        $teamId     = $player->getEquipe();
+
+        if ($teamId != 0) {
+            $teamName = $teamRepo->find($teamId)->getNom();
+        } else {
+            $teamName = 'Sans équipe';
+        }
+
         // Afficher les inforamtions via une vue/template (fichier twig)
-        // render() associe la vue (fichier .twig) passé en premier arguement avec le tableau associatif passé en deuxième argument
+        // render() associe la vue (fichier .twig) passé en premier argument avec le tableau associatif passé en deuxième argument
         // Les données que le controller fournit à la vue seront accessible (affichables, itérables, etc..) par cette dernière.
         return $this->render('player/detail.html.twig', array(
-            'player' => $player
+            'player' => $player,
+            'teamName' => $teamName
         ));
     }
 
