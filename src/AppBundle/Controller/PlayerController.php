@@ -6,6 +6,12 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+
+// classe servant à la sérialisation (passage d'objet à chaîne de caractères)
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+
 use AppBundle\Entity\Player;
 
 class PlayerController extends Controller
@@ -37,23 +43,11 @@ class PlayerController extends Controller
         //$players = $repository->findAll();
 
         $em = $this->getDoctrine()->getManager();
+        $playerRepo = $em->getRepository('AppBundle:Player');
 
-        $query = $em->createQuery('
-            SELECT p
-            FROM AppBundle:Player p
-            WHERE p.age < :age
-        ')->setParameter('age', 100);
-
-        // requête personnalisée avec jointure
-        // A COMPLETER
-/*        $query = $em->createQuery('
-            SELECT p, t
-            FROM AppBundle:Player p
-            JOIN AppBundle:Team t
-            WHERE p.equipe = t.id
-        ');*/
-
-        $players = $query->getResult();
+        //listing peut être appelée avc ou sans argument
+        //Sans argument spécifié ci dessous ds listing, la valeur par défaut (100) sera appliquée
+        $players = $playerRepo->listing();
         //var_dump($players);
 
         return $this->render('player/index.html.twig', array(
@@ -64,6 +58,37 @@ class PlayerController extends Controller
             'players'       => $players
         ));
     }
+
+    /**
+     * @Route("/json/players")
+     */
+    public function jsonIndexAction(Request $request)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $playerRepo = $em->getRepository('AppBundle:Player');
+        $players = $playerRepo->listing();
+
+        //Impératif: encoder le tableau d'objets Player en json
+        $encoders = array(new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+
+        $jsonPlayers = $serializer->serialize($players, 'json');
+        //test
+        //$t = ["nom" => "toto", "age" => 99];
+        $res = new Response();
+
+        // On autorise les requêtes provenant d'une origine différente (CROSS-DOMAIN). Ici, symfony "tourne" sur le port 8000, on autorise le traitement de requêtes provenant du port 80 (localhost:80)
+        $res->headers->set('Access-Control-Allow-Origin', 'http://localhost');
+
+        //json_encode fonctionne sur un tableau associatif.
+        // mais ne parvient pas à encoder correctement un objet.
+        //$res->setContent(json_encode($players));
+        $res->setContent($jsonPlayers);
+
+        return $res;
+    }
+
 
     /**
      * @Route("/test/player/add", name="testaddplayer")
@@ -139,7 +164,10 @@ class PlayerController extends Controller
                 ->getManager();
 
         $playerRepo = $em->getRepository('AppBundle:Player');
-        $teamRepo   = $em->getRepository('AppBundle:Team');
+        //$teamRepo   = $em->getRepository('AppBundle:Team');
+
+        // En l'absence de relation OneToOne spécifiée au niveau de la classe Player, il faut manuellement récupérer les données de l'équipe en fonction de l'identifiant du joueur
+        // Si la relation OneToOne est définie, symfony se charge des jointures, de l'instanciation des objets et de l'hydratation
 
         // récupération de l'id
         //$id = $request ->query->get('id'); // renvoie NULL
@@ -149,20 +177,21 @@ class PlayerController extends Controller
         $player = $playerRepo->find($id); // find() == findById() cherche tjs ds la colonne id de la table sql
         //var_dump($player);
 
-        $teamId     = $player->getEquipe();
+        /*$teamId     = $player->getEquipe();
 
         if ($teamId != 0) {
             $teamName = $teamRepo->find($teamId)->getNom();
         } else {
             $teamName = 'Sans équipe';
-        }
+        }*/
+
+
 
         // Afficher les inforamtions via une vue/template (fichier twig)
         // render() associe la vue (fichier .twig) passé en premier argument avec le tableau associatif passé en deuxième argument
         // Les données que le controller fournit à la vue seront accessible (affichables, itérables, etc..) par cette dernière.
         return $this->render('player/detail.html.twig', array(
             'player' => $player,
-            'teamName' => $teamName
         ));
     }
 

@@ -50,9 +50,8 @@ class Player
     private $maillot;
 
     /**
-     * @var int
      *
-     * @ORM\Column(name="equipe", type="integer")
+     * @ORM\OneToOne(targetEntity="AppBundle\Entity\Team", cascade="persist")
      */
     private $equipe;
 
@@ -165,11 +164,11 @@ class Player
     /**
      * Set equipe
      *
-     * @param integer $equipe
+     * @param Team $equipe
      *
      * @return Player
      */
-    public function setEquipe($equipe)
+    public function setEquipe(Team $equipe)
     {
         $this->equipe = $equipe;
 
@@ -179,7 +178,7 @@ class Player
     /**
      * Get equipe
      *
-     * @return int
+     * @return Team
      */
     public function getEquipe()
     {

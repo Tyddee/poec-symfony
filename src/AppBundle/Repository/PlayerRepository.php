@@ -10,4 +10,19 @@ namespace AppBundle\Repository;
  */
 class PlayerRepository extends \Doctrine\ORM\EntityRepository
 {
+    // la méthode personnalisée listing admet un argument $age dont la valeur par défaut est 100.
+    // la valeur de cet arguement est ensuite utilisée ds la requête DQL 
+    public function listing($age = 100)
+    {
+        //requête DQL (très proche du langage SQL) personnalisée
+        return $this
+            ->getEntityManager()
+            ->createQuery('
+                SELECT p
+                FROM AppBundle:Player p
+                WHERE p.age < :age
+                ORDER BY p.nom ASC')
+            ->setParameter('age', 100)
+            ->getResult();
+    }
 }
